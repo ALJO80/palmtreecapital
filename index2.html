@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Best & Worst Days Lab - Interactive Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #000000;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            animation: fadeInDown 0.6s ease-out;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.95;
+        }
+
+        .dashboard {
+            background: #1a1a1a;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .controls-section {
+            background: #2d2d2d;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .control-group label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #ffffff;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .control-group input[type="text"],
+        .control-group input[type="date"] {
+            padding: 12px;
+            border: 2px solid #444444;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+
+        .control-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .slider-group label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #ffffff;
+            font-size: 0.9em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .slider-value {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.9em;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #444444;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            background: #5568d3;
+            transform: scale(1.2);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+            color: #ffffff;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .error.active {
+            display: block;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 20px;
+            color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card h3 {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-card .value {
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+
+        .stat-card .subvalue {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        .chart-container {
+            background: #000000;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            min-height: 600px;
+        }
+
+        .chart-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #333333;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 25px;
+            background: #2d2d2d;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 0.5px;
+        }
+
+        table th:first-child {
+            border-top-left-radius: 12px;
+        }
+
+        table th:last-child {
+            border-top-right-radius: 12px;
+        }
+
+        table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #444444;
+            color: #ffffff;
+        }
+
+        table tr:hover {
+            background: #3d3d3d;
+        }
+
+        .positive {
+            color: #38a169;
+            font-weight: 600;
+        }
+
+        .negative {
+            color: #e53e3e;
+            font-weight: 600;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .controls-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📈 Best & Worst Days Lab</h1>
+            <p>Impact analysis of best and worst trading days on performance</p>
+        </div>
+
+        <div class="dashboard">
+            <div class="controls-section">
+                <div class="controls-grid">
+                    <div class="control-group">
+                        <label for="asset">Asset Ticker:</label>
+                        <input type="text" id="asset" value="HIMS" placeholder="e.g. AAPL, TSLA">
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="benchmark">Benchmark Ticker:</label>
+                        <input type="text" id="benchmark" value="SPY" placeholder="e.g. SPY, QQQ">
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="startDate">Start Date:</label>
+                        <input type="date" id="startDate" value="2020-01-01">
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="endDate">End Date (optional):</label>
+                        <input type="date" id="endDate">
+                    </div>
+                </div>
+
+                <div class="controls-grid">
+                    <div class="slider-group">
+                        <label>
+                            <span>Best N Days:</span>
+                            <span class="slider-value" id="bestValue">10</span>
+                        </label>
+                        <input type="range" id="topBest" min="0" max="100" value="10">
+                    </div>
+                    
+                    <div class="slider-group">
+                        <label>
+                            <span>Worst M Days:</span>
+                            <span class="slider-value" id="worstValue">10</span>
+                        </label>
+                        <input type="range" id="topWorst" min="0" max="100" value="10">
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" id="analyzeBtn" onclick="runAnalysis()">
+                        🚀 Run Analysis
+                    </button>
+                </div>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Loading data and running analysis...</p>
+            </div>
+
+            <div class="error" id="error"></div>
+
+            <div id="results" style="display: none;">
+                <div class="stats-grid" id="statsGrid"></div>
+                
+                <div class="chart-container">
+                    <div class="chart-title">📊 Equity Curve - Scenario Comparison</div>
+                    <div id="equityChart"></div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart-title">📉 Drawdown Analysis</div>
+                    <div id="drawdownChart"></div>
+                </div>
+
+                <div class="table-container" id="bestDaysTableContainer" style="display: none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th colspan="2" style="text-align: center;">🌟 Best Days</th>
+                            </tr>
+                            <tr>
+                                <th>Date</th>
+                                <th>Return %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bestDaysTable"></tbody>
+                    </table>
+                </div>
+
+                <div class="table-container" id="worstDaysTableContainer" style="display: none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th colspan="2" style="text-align: center;">💥 Worst Days</th>
+                            </tr>
+                            <tr>
+                                <th>Date</th>
+                                <th>Return %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="worstDaysTable"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Update slider values
+        document.getElementById('topBest').addEventListener('input', function(e) {
+            document.getElementById('bestValue').textContent = e.target.value;
+        });
+
+        document.getElementById('topWorst').addEventListener('input', function(e) {
+            document.getElementById('worstValue').textContent = e.target.value;
+        });
+
+        // Set max date to today
+        document.getElementById('endDate').max = new Date().toISOString().split('T')[0];
+        document.getElementById('startDate').max = new Date().toISOString().split('T')[0];
+
+        function showLoading() {
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('error').classList.remove('active');
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('analyzeBtn').disabled = true;
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('active');
+            document.getElementById('analyzeBtn').disabled = false;
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('active');
+            hideLoading();
+        }
+
+        function formatPercent(value) {
+            return (value * 100).toFixed(2) + '%';
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US');
+        }
+
+        async function fetchYahooData(ticker, startDate, endDate) {
+            try {
+                // Use Alpha Vantage free API as alternative
+                // For production, you should get your own API key from alphavantage.co
+                const API_KEY = 'demo'; // Replace with your key for production
+                
+                // Calculate date range
+                const start = new Date(startDate);
+                const end = endDate ? new Date(endDate) : new Date();
+                
+                // Use Yahoo Finance alternative - financialmodelingprep API (free tier)
+                const url = `https://financialmodelingprep.com/api/v3/historical-price-full/${ticker}?apikey=demo`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (!data || !data.historical) {
+                    throw new Error(`No data found for ${ticker}`);
+                }
+                
+                // Filter by date range and format
+                const prices = data.historical
+                    .filter(item => {
+                        const date = new Date(item.date);
+                        return date >= start && date <= end;
+                    })
+                    .reverse() // Yahoo format is newest first, we want oldest first
+                    .map(item => ({
+                        date: item.date,
+                        price: item.adjClose || item.close
+                    }));
+                
+                if (prices.length === 0) {
+                    throw new Error(`No data in the selected date range for ${ticker}`);
+                }
+                
+                return prices;
+                
+            } catch (error) {
+                // Fallback: try Yahoo Finance with multiple proxies
+                return await fetchYahooDataWithProxy(ticker, startDate, endDate);
+            }
+        }
+        
+        async function fetchYahooDataWithProxy(ticker, startDate, endDate) {
+            const end = endDate ? Math.floor(new Date(endDate).getTime() / 1000) : Math.floor(Date.now() / 1000);
+            const start = Math.floor(new Date(startDate).getTime() / 1000);
+            
+            const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?period1=${start}&period2=${end}&interval=1d`;
+            
+            // Try multiple CORS proxies
+            const proxies = [
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`,
+                `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`,
+                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(yahooUrl)}`,
+            ];
+            
+            let lastError;
+            
+            for (const proxyUrl of proxies) {
+                try {
+                    const response = await fetch(proxyUrl);
+                    const data = await response.json();
+                    return parseYahooData(data, ticker);
+                } catch (e) {
+                    lastError = e;
+                    console.log(`Proxy failed, trying next...`);
+                    continue;
+                }
+            }
+            
+            throw lastError || new Error(`Unable to fetch data for ${ticker}`);
+        }
+        
+        function parseYahooData(data, ticker) {
+            if (!data.chart || !data.chart.result || data.chart.result.length === 0) {
+                throw new Error(`No data found for ${ticker}`);
+            }
+            
+            const result = data.chart.result[0];
+            const timestamps = result.timestamp;
+            const quotes = result.indicators.adjclose?.[0]?.adjclose || result.indicators.quote?.[0]?.close;
+            
+            if (!timestamps || !quotes) {
+                throw new Error(`Missing data for ${ticker}`);
+            }
+            
+            const prices = [];
+            for (let i = 0; i < timestamps.length; i++) {
+                if (quotes[i] !== null) {
+                    prices.push({
+                        date: new Date(timestamps[i] * 1000).toISOString().split('T')[0],
+                        price: quotes[i]
+                    });
+                }
+            }
+            
+            return prices;
+        }
+
+        function calculateReturns(prices) {
+            const returns = [];
+            for (let i = 1; i < prices.length; i++) {
+                returns.push({
+                    date: prices[i].date,
+                    return: (prices[i].price / prices[i-1].price) - 1
+                });
+            }
+            return returns;
+        }
+
+        function calculateEquity(returns, base = 100) {
+            const equity = [{date: returns[0].date, value: base}];
+            let current = base;
+            
+            for (let i = 0; i < returns.length; i++) {
+                current = current * (1 + returns[i].return);
+                equity.push({
+                    date: returns[i].date,
+                    value: current
+                });
+            }
+            
+            return equity;
+        }
+
+        function calculateDrawdown(equity) {
+            const drawdown = [];
+            let peak = equity[0].value;
+            
+            for (let i = 0; i < equity.length; i++) {
+                if (equity[i].value > peak) {
+                    peak = equity[i].value;
+                }
+                const dd = (equity[i].value / peak) - 1;
+                drawdown.push({
+                    date: equity[i].date,
+                    value: dd
+                });
+            }
+            
+            return drawdown;
+        }
+
+        function calculateStats(returns) {
+            if (returns.length === 0) {
+                return {totalReturn: 0, cagr: 0, volatility: 0, maxDrawdown: 0};
+            }
+            
+            const totalReturn = returns.reduce((acc, r) => acc * (1 + r.return), 1) - 1;
+            const years = returns.length / 252;
+            const cagr = years > 0 ? Math.pow(1 + totalReturn, 1/years) - 1 : 0;
+            
+            const mean = returns.reduce((acc, r) => acc + r.return, 0) / returns.length;
+            const variance = returns.reduce((acc, r) => acc + Math.pow(r.return - mean, 2), 0) / returns.length;
+            const volatility = Math.sqrt(variance) * Math.sqrt(252);
+            
+            const equity = calculateEquity(returns);
+            const drawdown = calculateDrawdown(equity);
+            const maxDrawdown = Math.min(...drawdown.map(d => d.value));
+            
+            return {
+                totalReturn,
+                cagr,
+                volatility,
+                maxDrawdown
+            };
+        }
+
+        async function runAnalysis() {
+            showLoading();
+            
+            const asset = document.getElementById('asset').value.toUpperCase();
+            const benchmark = document.getElementById('benchmark').value.toUpperCase();
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const topBest = parseInt(document.getElementById('topBest').value);
+            const topWorst = parseInt(document.getElementById('topWorst').value);
+            
+            if (!asset || !benchmark || !startDate) {
+                showError('Please fill in all required fields');
+                return;
+            }
+            
+            try {
+                // Fetch data
+                const [assetPrices, benchPrices] = await Promise.all([
+                    fetchYahooData(asset, startDate, endDate),
+                    fetchYahooData(benchmark, startDate, endDate)
+                ]);
+                
+                // Align dates
+                const assetDates = new Set(assetPrices.map(p => p.date));
+                const commonDates = benchPrices.filter(p => assetDates.has(p.date)).map(p => p.date);
+                
+                const alignedAsset = assetPrices.filter(p => commonDates.includes(p.date));
+                const alignedBench = benchPrices.filter(p => commonDates.includes(p.date));
+                
+                // Calculate returns
+                const assetReturns = calculateReturns(alignedAsset);
+                const benchReturns = calculateReturns(alignedBench);
+                
+                // Find best and worst days
+                const sortedReturns = [...assetReturns].sort((a, b) => b.return - a.return);
+                const bestDays = sortedReturns.slice(0, topBest);
+                const worstDays = sortedReturns.slice(-topWorst).reverse();
+                
+                // Create scenarios
+                const bestDatesSet = new Set(bestDays.map(d => d.date));
+                const worstDatesSet = new Set(worstDays.map(d => d.date));
+                
+                const returnsNoBest = assetReturns.map(r => ({
+                    date: r.date,
+                    return: bestDatesSet.has(r.date) ? 0 : r.return
+                }));
+                
+                const returnsNoWorst = assetReturns.map(r => ({
+                    date: r.date,
+                    return: worstDatesSet.has(r.date) ? 0 : r.return
+                }));
+                
+                // Calculate equity curves
+                const assetEquity = calculateEquity(assetReturns);
+                const assetEquityNoBest = calculateEquity(returnsNoBest);
+                const assetEquityNoWorst = calculateEquity(returnsNoWorst);
+                const benchEquity = calculateEquity(benchReturns);
+                
+                // Calculate stats
+                const assetStats = calculateStats(assetReturns);
+                const assetStatsNoBest = calculateStats(returnsNoBest);
+                const assetStatsNoWorst = calculateStats(returnsNoWorst);
+                const benchStats = calculateStats(benchReturns);
+                
+                // Display results
+                displayStats(asset, benchmark, assetStats, assetStatsNoBest, assetStatsNoWorst, benchStats, topBest, topWorst);
+                displayEquityChart(asset, benchmark, assetEquity, assetEquityNoBest, assetEquityNoWorst, benchEquity, topBest, topWorst);
+                
+                const drawdown = calculateDrawdown(assetEquity);
+                displayDrawdownChart(asset, drawdown);
+                
+                displayBestWorstTables(bestDays, worstDays);
+                
+                document.getElementById('results').style.display = 'block';
+                hideLoading();
+                
+            } catch (error) {
+                console.error(error);
+                showError('Error loading data: ' + error.message);
+            }
+        }
+
+        function displayStats(asset, benchmark, full, noBest, noWorst, bench, topBest, topWorst) {
+            const statsGrid = document.getElementById('statsGrid');
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <h3>${asset} (Full)</h3>
+                    <div class="value">${formatPercent(full.totalReturn)}</div>
+                    <div class="subvalue">CAGR: ${formatPercent(full.cagr)}</div>
+                    <div class="subvalue">Vol: ${formatPercent(full.volatility)}</div>
+                    <div class="subvalue">Max DD: ${formatPercent(full.maxDrawdown)}</div>
+                </div>
+                
+                <div class="stat-card">
+                    <h3>${asset} (No Best ${topBest})</h3>
+                    <div class="value">${formatPercent(noBest.totalReturn)}</div>
+                    <div class="subvalue">CAGR: ${formatPercent(noBest.cagr)}</div>
+                    <div class="subvalue">Vol: ${formatPercent(noBest.volatility)}</div>
+                    <div class="subvalue">Max DD: ${formatPercent(noBest.maxDrawdown)}</div>
+                </div>
+                
+                <div class="stat-card">
+                    <h3>${asset} (No Worst ${topWorst})</h3>
+                    <div class="value">${formatPercent(noWorst.totalReturn)}</div>
+                    <div class="subvalue">CAGR: ${formatPercent(noWorst.cagr)}</div>
+                    <div class="subvalue">Vol: ${formatPercent(noWorst.volatility)}</div>
+                    <div class="subvalue">Max DD: ${formatPercent(noWorst.maxDrawdown)}</div>
+                </div>
+                
+                <div class="stat-card">
+                    <h3>${benchmark}</h3>
+                    <div class="value">${formatPercent(bench.totalReturn)}</div>
+                    <div class="subvalue">CAGR: ${formatPercent(bench.cagr)}</div>
+                    <div class="subvalue">Vol: ${formatPercent(bench.volatility)}</div>
+                    <div class="subvalue">Max DD: ${formatPercent(bench.maxDrawdown)}</div>
+                </div>
+            `;
+        }
+
+        function displayEquityChart(asset, benchmark, full, noBest, noWorst, bench, topBest, topWorst) {
+            const traces = [
+                {
+                    x: full.map(d => d.date),
+                    y: full.map(d => d.value),
+                    name: `${asset} Full`,
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: {color: '#667eea', width: 2}
+                },
+                {
+                    x: noBest.map(d => d.date),
+                    y: noBest.map(d => d.value),
+                    name: `${asset} No Best ${topBest}`,
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: {color: '#f56565', width: 2, dash: 'dash'}
+                },
+                {
+                    x: noWorst.map(d => d.date),
+                    y: noWorst.map(d => d.value),
+                    name: `${asset} No Worst ${topWorst}`,
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: {color: '#48bb78', width: 2, dash: 'dot'}
+                },
+                {
+                    x: bench.map(d => d.date),
+                    y: bench.map(d => d.value),
+                    name: benchmark,
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: {color: '#a0aec0', width: 2}
+                }
+            ];
+            
+            const layout = {
+                xaxis: {
+                    title: 'Date',
+                    rangeslider: {visible: true},
+                    gridcolor: '#333333',
+                    color: '#ffffff'
+                },
+                yaxis: {
+                    title: 'Equity (base 100)',
+                    gridcolor: '#333333',
+                    color: '#ffffff'
+                },
+                hovermode: 'x unified',
+                showlegend: true,
+                legend: {
+                    x: 0.01,
+                    y: 0.99,
+                    bgcolor: 'rgba(0,0,0,0.5)',
+                    font: {color: '#ffffff'}
+                },
+                margin: {t: 20, b: 40},
+                plot_bgcolor: '#000000',
+                paper_bgcolor: '#000000',
+                font: {color: '#ffffff'},
+                height: 550
+            };
+            
+            Plotly.newPlot('equityChart', traces, layout, {responsive: true});
+        }
+
+        function displayDrawdownChart(asset, drawdown) {
+            const trace = {
+                x: drawdown.map(d => d.date),
+                y: drawdown.map(d => d.value * 100),
+                type: 'scatter',
+                mode: 'lines',
+                fill: 'tozeroy',
+                name: 'Drawdown',
+                line: {color: '#f56565', width: 2},
+                fillcolor: 'rgba(245, 101, 101, 0.3)'
+            };
+            
+            const layout = {
+                xaxis: {
+                    title: 'Date',
+                    rangeslider: {visible: true},
+                    gridcolor: '#333333',
+                    color: '#ffffff'
+                },
+                yaxis: {
+                    title: 'Drawdown (%)',
+                    gridcolor: '#333333',
+                    color: '#ffffff'
+                },
+                hovermode: 'x unified',
+                showlegend: false,
+                margin: {t: 20, b: 40},
+                plot_bgcolor: '#000000',
+                paper_bgcolor: '#000000',
+                font: {color: '#ffffff'},
+                height: 550
+            };
+            
+            Plotly.newPlot('drawdownChart', [trace], layout, {responsive: true});
+        }
+
+        function displayBestWorstTables(bestDays, worstDays) {
+            const bestTable = document.getElementById('bestDaysTable');
+            const worstTable = document.getElementById('worstDaysTable');
+            
+            if (bestDays.length > 0) {
+                bestTable.innerHTML = bestDays.map(d => `
+                    <tr>
+                        <td>${formatDate(d.date)}</td>
+                        <td class="positive">+${(d.return * 100).toFixed(2)}%</td>
+                    </tr>
+                `).join('');
+                document.getElementById('bestDaysTableContainer').style.display = 'block';
+            }
+            
+            if (worstDays.length > 0) {
+                worstTable.innerHTML = worstDays.map(d => `
+                    <tr>
+                        <td>${formatDate(d.date)}</td>
+                        <td class="negative">${(d.return * 100).toFixed(2)}%</td>
+                    </tr>
+                `).join('');
+                document.getElementById('worstDaysTableContainer').style.display = 'block';
+            }
+        }
+
+        // Run analysis on Enter key
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    runAnalysis();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
